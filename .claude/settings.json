@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(script/check)",
+      "WebSearch",
+      "WebFetch(domain:www.hacs.xyz)",
+      "Bash(python3 -c \"import aiohttp; print\\(aiohttp.__version__\\)\")",
+      "Bash(pip show *)",
+      "Bash(ls /workspaces/important_entities_watchdog/.venv/bin/python* 2>/dev/null)",
+      "Read(//home/vscode/.local/ha-venv/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(/home/vscode/.local/ha-venv/bin/python -c \"import aiohttp\")",
+      "Bash(/home/vscode/.local/ha-venv/bin/python -c \"import aiohttp; print\\('ok'\\)\")",
+      "Bash(/home/vscode/.local/ha-venv/bin/python -c \"import sys; print\\(sys.version\\); import aiohttp; print\\('aiohttp:', aiohttp.__version__\\)\")",
+      "Bash(./script/check)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('data',{}\\).get\\('items',[]\\), indent=2\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(git config *)",
+      "Bash(.local/ha-venv/bin/python -m ruff format --diff custom_components/important_entities_watchdog/binary_sensor.py custom_components/important_entities_watchdog/sensor.py)",
+      "Bash(.local/ha-venv/bin/python -m ruff format custom_components/important_entities_watchdog/binary_sensor.py custom_components/important_entities_watchdog/sensor.py)",
+      "Bash(.local/ha-venv/bin/python -m ruff format --check custom_components/important_entities_watchdog/ tests/)",
+      "Bash(.local/ha-venv/bin/python -m ruff check custom_components/important_entities_watchdog/ tests/)",
+      "Bash(script/test)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

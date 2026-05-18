@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Important Entities Watchdog",
+        "description": "Pick a label and the period after which entities are considered silent.",
+        "data": {
+          "label": "Label",
+          "period": "Silent threshold"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This label and period combination is already configured.",
+      "no_labels": "No labels found. Create a label in Home Assistant first and assign it to the entities you want to monitor."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Change watchdog period",
+        "data": {
+          "period": "Silent threshold"
+        }
+      }
+    }
+  }
+}

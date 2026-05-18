@@ -1,0 +1,4 @@
+{
+  "python.defaultInterpreterPath": "/home/vscode/.local/ha-venv/bin/python",
+  "python.analysis.extraPaths": ["/home/vscode/.local/ha-venv/lib/python3.14/site-packages"]
+}

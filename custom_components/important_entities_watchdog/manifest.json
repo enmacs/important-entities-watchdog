@@ -1,0 +1,13 @@
+{
+  "domain": "important_entities_watchdog",
+  "name": "Important Entities Watchdog",
+  "version": "0.1.0",
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "documentation": "https://github.com/enmacs/important-entities-watchdog",
+  "issue_tracker": "https://github.com/enmacs/important-entities-watchdog/issues",
+  "codeowners": ["@enmacs"],
+  "requirements": [],
+  "dependencies": [],
+  "integration_type": "service"
+}
