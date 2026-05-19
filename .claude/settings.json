@@ -50,7 +50,13 @@
       "Bash(pip index *)",
       "Bash(curl -s \"https://pypi.org/pypi/pytest-homeassistant-custom-component/json\")",
       "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); versions=sorted\\(data['releases'].keys\\(\\), key=lambda v: [int\\(x\\) if x.isdigit\\(\\) else x for x in v.split\\('.'\\)], reverse=True\\)[:20]; print\\('\\\\n'.join\\(versions\\)\\)\")",
-      "Bash(curl -s https://pypi.org/pypi/pytest-homeassistant-custom-component/__TRACKED_VAR__/json)"
+      "Bash(curl -s https://pypi.org/pypi/pytest-homeassistant-custom-component/__TRACKED_VAR__/json)",
+      "Bash(find /usr -path \"*/homeassistant/components/lovelace*\" -name \"*.py\" 2>/dev/null | head -20 || find /home -path \"*/homeassistant/components/lovelace*\" -name \"*.py\" 2>/dev/null | head -20 || pip show homeassistant 2>/dev/null | grep Location)",
+      "Read(//usr/**)",
+      "Read(//home/**)",
+      "Bash(python3 -c \"import homeassistant; print\\(homeassistant.__file__\\)\")",
+      "Bash(.venv/bin/ruff format *)",
+      "Bash(.venv/bin/ruff check *)"
     ]
   }
 }

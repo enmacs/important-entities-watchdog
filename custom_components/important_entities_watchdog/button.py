@@ -14,6 +14,7 @@ from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import WatchdogCoordinator
+from .dashboard import async_create_or_update_dashboard
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the maintenance buttons for this config entry."""
     coordinator: WatchdogCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([CleanOrphansButton(coordinator)])
+    async_add_entities([CleanOrphansButton(coordinator), CreateDashboardButton(coordinator)])
 
 
 class CleanOrphansButton(ButtonEntity):
@@ -79,3 +80,23 @@ class CleanOrphansButton(ButtonEntity):
             label_id,
             removed,
         )
+
+
+class CreateDashboardButton(ButtonEntity):
+    """Create or refresh the Watchdog Lovelace dashboard."""
+
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:view-dashboard-edit"
+
+    def __init__(self, coordinator: WatchdogCoordinator) -> None:
+        """Initialize the button."""
+        self._coordinator = coordinator
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_create_dashboard"
+        self._attr_name = f"Watchdog create dashboard: {coordinator.label_id} ({coordinator.period_key})"
+        self._attr_suggested_object_id = (
+            f"{DOMAIN}_create_dashboard_{slugify(coordinator.label_id)}_{coordinator.period_key}"
+        )
+
+    async def async_press(self) -> None:
+        """Create or update the Watchdog Lovelace dashboard."""
+        await async_create_or_update_dashboard(self.hass)

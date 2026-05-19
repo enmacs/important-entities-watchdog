@@ -1,0 +1,7 @@
+create_dashboard:
+  name: Create Watchdog dashboard
+  description: >-
+    Creates or updates a dedicated "Entity Watchdog" Lovelace panel in the
+    sidebar. The dashboard contains one view per config entry, each with a
+    summary card and a status grid for all tracked entities. Call this again
+    after adding or removing config entries to keep the dashboard in sync.
