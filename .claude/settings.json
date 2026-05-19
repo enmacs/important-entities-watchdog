@@ -31,7 +31,22 @@
       "Bash(ssh -T -o StrictHostKeyChecking=no -o ConnectTimeout=5 git@github.com)",
       "Bash(git remote *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/home-assistant/core/2025.12.3/requirements_test.txt\")",
+      "WebFetch(domain:pypi.org)",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/home-assistant/core/2025.12.3/requirements_test_pre_commit.txt\")",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/home-assistant/core/2025.12.3/homeassistant/package_constraints.txt\")",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/home-assistant/core/2025.12.3/script/setup\")",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/home-assistant/core/2025.12.3/.github/workflows/ci.yml\")",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/home-assistant/core/2025.12.3/script/bootstrap\")",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/home-assistant/core/2025.12.3/pyproject.toml\")",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -sI \"https://pypi.org/simple/mypy-dev/\" -L)",
+      "Bash(curl -fsSL \"https://pypi.org/simple/mypy-dev/\" -H \"Accept: application/vnd.pypi.simple.v1+json\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); vs=sorted\\({f['filename'] for f in d['files'] if '1.19' in f['filename']}\\); print\\('\\\\n'.join\\(vs[:20]\\)\\); print\\(\\); print\\('total files:', len\\(d['files']\\)\\)\")",
+      "Bash(curl -fsSL \"https://pypi.org/pypi/homeassistant/json\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('latest:', d['info']['version']\\); vs=sorted\\(d['releases'].keys\\(\\)\\); print\\('recent 20:'\\); [print\\(' ',v\\) for v in vs[-20:]]\")",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/home-assistant/core/2026.5.2/requirements_test.txt\")"
     ]
   }
 }
