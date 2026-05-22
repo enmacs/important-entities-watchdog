@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.frontend import async_panel_exists, async_register_built_in_panel
+from homeassistant.components.frontend import async_register_built_in_panel
 from homeassistant.components.lovelace.const import (
     CONF_REQUIRE_ADMIN,
     CONF_SHOW_IN_SIDEBAR,
@@ -186,6 +186,11 @@ def _generate_lovelace_config(hass: HomeAssistant) -> dict[str, Any]:
     return {"title": DASHBOARD_TITLE, "views": views}
 
 
+def _panel_exists(hass: HomeAssistant, frontend_url_path: str) -> bool:
+    # async_panel_exists was added in HA 2026.5; replicate its logic for 2026.4 compat.
+    return frontend_url_path in hass.data.get("frontend_panels", {})
+
+
 async def async_create_or_update_dashboard(hass: HomeAssistant) -> None:
     """Create or update the Watchdog Lovelace dashboard.
 
@@ -198,7 +203,7 @@ async def async_create_or_update_dashboard(hass: HomeAssistant) -> None:
     """
     config = _generate_lovelace_config(hass)
 
-    if async_panel_exists(hass, DASHBOARD_URL_PATH):
+    if _panel_exists(hass, DASHBOARD_URL_PATH):
         lovelace_data = hass.data.get(LOVELACE_DATA)
         if lovelace_data is not None:
             existing = lovelace_data.dashboards.get(DASHBOARD_URL_PATH)
