@@ -38,7 +38,7 @@ _SILENT_NOW_TEMPLATE = (
     "**{{ silent | count }} silent**\n\n"
     "| Status | Entity | Last reported | Device |\n"
     "|---|---|---|---|\n"
-    "{%- set ns = namespace(rows=[]) -%}"
+    "{% set ns = namespace(rows=[]) -%}"
     "{%- for eid in silent -%}"
     "{%- set ts = states[eid].last_reported.timestamp() if states[eid] and states[eid].last_reported else 0 -%}"
     "{%- set ns.rows = ns.rows + [{'eid': eid, 'ts': ts}] -%}"
@@ -64,7 +64,7 @@ _ALL_TRACKED_TEMPLATE = (
     "{%- if tracked -%}"
     "| Status | Entity | Last reported | Device |\n"
     "|---|---|---|---|\n"
-    "{%- for eid in tracked | sort -%}"
+    "{% for eid in tracked | sort -%}"
     "{%- set did = device_id(eid) -%}"
     "{%- set fn = state_attr(eid, 'friendly_name') -%}"
     "| {% if eid in silent %}🔴 silent{% else %}🟢 fresh{% endif %} "
@@ -222,7 +222,7 @@ def _build_view(
                         "title": f"Tracked sources ({period})",
                         "hours_to_show": 24,
                     },
-                    "filter": {"include": [{"entity_id": f"binary_sensor.{DOMAIN}_{slugify(label)}_*_{period}"}]},
+                    "filter": {"include": [{"entity_id": f"binary_sensor.watchdog_{slugify(label)}_*_{period}"}]},
                     "show_empty": False,
                     "grid_options": {"columns": 48, "rows": "auto"},
                 }
