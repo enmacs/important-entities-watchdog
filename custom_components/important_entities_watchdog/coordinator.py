@@ -50,7 +50,9 @@ class WatchdogCoordinator:
 
         # Instance-scoped callback lists. Do NOT make these class attributes
         # — they would leak across config entries.
-        self._update_callbacks: list[Callable[[], None]] = []
+        # Update callback receives the entity_id of the source that fired,
+        # or None on the periodic tick (meaning "refresh everything").
+        self._update_callbacks: list[Callable[[str | None], None]] = []
         self._membership_callbacks: list[Callable[[], None]] = []
 
     async def async_init(self) -> None:
@@ -133,26 +135,32 @@ class WatchdogCoordinator:
         self._source_unsubs.append(async_track_state_report_event(self.hass, entities, self._handle_source_event))
 
     @callback
-    def _handle_source_event(self, _event) -> None:
-        """A tracked source reported or changed — recompute downstream sensors.
+    def _handle_source_event(self, event) -> None:
+        """A tracked source reported or changed — notify with its entity_id.
 
         Untyped event because this handler is registered with both
         async_track_state_change_event (Event[EventStateChangedData]) and
-        async_track_state_report_event (Event[EventStateReportedData]), and
-        we only need to know that *something* happened.
+        async_track_state_report_event (Event[EventStateReportedData]),
+        and Event's generic is invariant. Both payloads carry "entity_id".
         """
+        entity_id: str | None = event.data.get("entity_id")
         for cb in list(self._update_callbacks):
-            cb()
+            cb(entity_id)
 
     @callback
     def _handle_tick(self, _now) -> None:
-        """Periodic recompute trigger."""
+        """Periodic recompute — None signals "refresh all tracked entities"."""
         for cb in list(self._update_callbacks):
-            cb()
+            cb(None)
 
     @callback
-    def register_update_callback(self, cb: Callable[[], None]) -> Callable[[], None]:
-        """Register a callback invoked on each tick. Returns an unsubscribe fn."""
+    def register_update_callback(self, cb: Callable[[str | None], None]) -> Callable[[], None]:
+        """Register a callback for source updates.
+
+        The callback receives the entity_id of the source that fired, or
+        None on the periodic tick (refresh everything). Returns an
+        unsubscribe fn.
+        """
         self._update_callbacks.append(cb)
 
         def _unregister() -> None:

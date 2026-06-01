@@ -25,7 +25,9 @@ async def async_setup_entry(
     coordinator: WatchdogCoordinator = hass.data[DOMAIN][entry.entry_id]
     sensor = SilentCountSensor(coordinator)
 
-    coordinator.register_update_callback(lambda: sensor.async_write_ha_state() if sensor.hass is not None else None)
+    coordinator.register_update_callback(
+        lambda _entity_id: sensor.async_write_ha_state() if sensor.hass is not None else None
+    )
     coordinator.register_membership_callback(lambda: sensor.async_write_ha_state() if sensor.hass is not None else None)
 
     async_add_entities([sensor])

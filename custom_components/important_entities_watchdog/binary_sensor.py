@@ -45,10 +45,20 @@ async def async_setup_entry(
             hass.async_create_task(ent.async_remove(force_remove=True))
 
     @callback
-    def _push_update() -> None:
-        for ent in known.values():
-            if ent.hass is not None:
-                ent.async_write_ha_state()
+    def _push_update(entity_id: str | None) -> None:
+        # entity_id=None means the periodic tick: refresh every sensor so
+        # that silent sources flip to "stale" once the period elapses.
+        # A specific entity_id means only that source reported — updating
+        # the others would be wasted work, which matters for high-frequency
+        # sources.
+        if entity_id is None:
+            for ent in known.values():
+                if ent.hass is not None:
+                    ent.async_write_ha_state()
+            return
+        ent = known.get(entity_id)
+        if ent is not None and ent.hass is not None:
+            ent.async_write_ha_state()
 
     coordinator.register_membership_callback(_sync_membership)
     coordinator.register_update_callback(_push_update)
