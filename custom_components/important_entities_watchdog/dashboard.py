@@ -37,10 +37,11 @@ _SILENT_NOW_TEMPLATE = """\
 {% if silent %}
 **{{ silent | count }} silent**
 
-| Entity | Last reported |
-|---|---|
+| Entity | Last reported | Device |
+|---|---|---|
 {% for eid in silent -%}
-| `{{ eid }}` | {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} |
+  {%- set did = device_id(eid) -%}
+| `{{ eid }}` | {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} | {% if did %}[Gerät](/config/devices/device/{{ did }}){% else %}—{% endif %} |
 {% endfor %}
 {% else %}
 All tracked entities reporting within period.
@@ -52,10 +53,11 @@ _ALL_TRACKED_TEMPLATE = """\
 {% set tracked = state_attr(summary, 'tracked_entities') or [] %}
 {% set silent = state_attr(summary, 'silent_entities') or [] %}
 {% if tracked %}
-| Entity | State | Last reported |
-|---|---|---|
+| Entity | State | Last reported | Device |
+|---|---|---|---|
 {% for eid in tracked | sort -%}
-| `{{ eid }}` | {% if eid in silent %}silent{% else %}fresh{% endif %} | {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} |
+  {%- set did = device_id(eid) -%}
+| `{{ eid }}` | {% if eid in silent %}silent{% else %}fresh{% endif %} | {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} | {% if did %}[Gerät](/config/devices/device/{{ did }}){% else %}—{% endif %} |
 {% endfor %}
 {% else %}
 No entities carry the label yet.
@@ -141,6 +143,23 @@ def _build_view(label: str, period: str, summary_eid: str, clean_orphans_eid: st
                         "type": "markdown",
                         "title": f"All tracked {period}",
                         "content": all_tracked,
+                        "grid_options": {"columns": 48, "rows": "auto"},
+                    }
+                ],
+                "column_span": 4,
+            },
+            {
+                "type": "grid",
+                "cards": [
+                    {
+                        "type": "custom:auto-entities",
+                        "card": {
+                            "type": "history-graph",
+                            "title": f"Tracked sources ({period})",
+                            "hours_to_show": 24,
+                        },
+                        "filter": {"include": [{"entity_id": f"binary_sensor.{DOMAIN}_{slugify(label)}_*_{period}"}]},
+                        "show_empty": False,
                         "grid_options": {"columns": 48, "rows": "auto"},
                     }
                 ],
