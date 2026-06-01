@@ -75,7 +75,7 @@ class AvailabilityBinarySensor(BinarySensorEntity):
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{source_entity_id}"
         # Friendly name kept readable. Entity_id is controlled separately via
         # suggested_object_id so it's stable and predictable regardless of name.
-        self._attr_name = f"Watchdog: {source_entity_id} ({coordinator.period_key})"
+        self._attr_name = f"Watchdog {coordinator.label_id}: {source_entity_id} ({coordinator.period_key})"
         self._attr_suggested_object_id = (
             f"{DOMAIN}_{slugify(coordinator.label_id)}_{slugify(source_entity_id)}_{coordinator.period_key}"
         )
