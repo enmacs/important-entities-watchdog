@@ -30,12 +30,16 @@ async def async_setup_entry(
 
 
 class CleanOrphansButton(ButtonEntity):
-    """Remove binary_sensor registry entries whose source is no longer labeled.
+    """Remove orphan binary_sensor registry entries across all watchdogs.
 
     A registry entry is considered an orphan when its source entity either no
-    longer exists in the entity registry, or no longer carries this config
-    entry's label. Currently-valid sensors are left untouched so their
-    history, friendly name, and area assignment are preserved.
+    longer exists in the entity registry, or no longer carries the label
+    belonging to its owning config entry. Currently-valid sensors are left
+    untouched so their history, friendly name, and area assignment are
+    preserved.
+
+    Pressing this rebuilds nothing — it just cleans up. The action spans
+    every configured watchdog, not only the entry this button belongs to.
     """
 
     _attr_entity_category = EntityCategory.CONFIG
@@ -51,34 +55,40 @@ class CleanOrphansButton(ButtonEntity):
         )
 
     async def async_press(self) -> None:
-        """Remove orphan binary_sensor entries owned by this config entry."""
+        """Remove orphan binary_sensor entries across every watchdog entry."""
         ent_reg = er.async_get(self.hass)
-        entry_id = self._coordinator.entry.entry_id
-        label_id = self._coordinator.label_id
-        # binary_sensor unique_ids are "<entry_id>_<source_entity_id>".
-        # Decoding the source back lets us check whether the source still
-        # exists in the registry and still carries our label.
-        prefix = f"{entry_id}_"
+        domain_data = self.hass.data.get(DOMAIN, {})
+        total_removed: list[str] = []
 
-        removed: list[str] = []
-        for registry_entry in list(ent_reg.entities.values()):
-            if (
-                registry_entry.config_entry_id != entry_id
-                or registry_entry.domain != "binary_sensor"
-                or not registry_entry.unique_id.startswith(prefix)
-            ):
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            coordinator: WatchdogCoordinator | None = domain_data.get(entry.entry_id)
+            if coordinator is None:
                 continue
-            source_eid = registry_entry.unique_id[len(prefix) :]
-            source_reg = ent_reg.async_get(source_eid)
-            if source_reg is None or label_id not in (source_reg.labels or set()):
-                ent_reg.async_remove(registry_entry.entity_id)
-                removed.append(registry_entry.entity_id)
+
+            entry_id = entry.entry_id
+            label_id = coordinator.label_id
+            # binary_sensor unique_ids are "<entry_id>_<source_entity_id>".
+            # Decoding the source back lets us check whether the source still
+            # exists in the registry and still carries the owning label.
+            prefix = f"{entry_id}_"
+
+            for registry_entry in list(ent_reg.entities.values()):
+                if (
+                    registry_entry.config_entry_id != entry_id
+                    or registry_entry.domain != "binary_sensor"
+                    or not registry_entry.unique_id.startswith(prefix)
+                ):
+                    continue
+                source_eid = registry_entry.unique_id[len(prefix) :]
+                source_reg = ent_reg.async_get(source_eid)
+                if source_reg is None or label_id not in (source_reg.labels or set()):
+                    ent_reg.async_remove(registry_entry.entity_id)
+                    total_removed.append(registry_entry.entity_id)
 
         _LOGGER.info(
-            "Watchdog cleaned %d orphan binary_sensor entries for label=%s: %s",
-            len(removed),
-            label_id,
-            removed,
+            "Watchdog cleaned %d orphan binary_sensor entries across all watchdogs: %s",
+            len(total_removed),
+            total_removed,
         )
 
 

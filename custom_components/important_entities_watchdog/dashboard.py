@@ -98,12 +98,12 @@ no event subscription. Detection latency up to one tick.
 - **Real-time** — subscribes to every source state event. Use only for \
 short periods where you need instant feedback.
 
-**Actions:**
-- Each watchdog tab has its own **Clean orphans** button to remove \
-binary-sensor registry entries whose source no longer carries the label.
-- **Recreate dashboards** (below) rebuilds this entire dashboard from the \
-current configuration. Press it after adding/removing watchdog entries or \
-toggling real-time mode.
+**Actions** (below, run across all configured watchdogs):
+- **Recreate dashboards** rebuilds this entire dashboard from the current \
+configuration. Press it after adding/removing watchdog entries or toggling \
+real-time mode.
+- **Clean orphans** removes binary-sensor registry entries whose source no \
+longer carries its watchdog's label.
 """
 
 _HEADER_INFO_TEMPLATE = (
@@ -160,7 +160,6 @@ def _build_view(
     label: str,
     period: str,
     summary_eid: str,
-    clean_orphans_eid: str | None,
 ) -> dict[str, Any]:
     """Build a sections view for one (label, period) entry."""
     header_info = _HEADER_INFO_TEMPLATE.replace("__SUMMARY__", summary_eid)
@@ -173,18 +172,6 @@ def _build_view(
             "content": header_info,
         },
     ]
-
-    action_cards: list[dict[str, Any]] = []
-    if clean_orphans_eid:
-        action_cards.append(
-            {
-                "type": "button",
-                "entity": clean_orphans_eid,
-                "name": "Clean orphans",
-                "icon": "mdi:broom",
-                "show_state": False,
-            }
-        )
 
     sections: list[dict[str, Any]] = [
         {"type": "grid", "cards": header_cards},
@@ -230,21 +217,6 @@ def _build_view(
             "column_span": 4,
         },
     ]
-    if action_cards:
-        sections.append(
-            {
-                "type": "grid",
-                "cards": [
-                    {
-                        "type": "heading",
-                        "icon": "mdi:tools",
-                        "heading": "Actions",
-                        "heading_style": "subtitle",
-                    },
-                    *action_cards,
-                ],
-            }
-        )
 
     return {
         "title": f"Watchdog {label} {period}",
@@ -279,13 +251,15 @@ def _build_view(
 def _build_overview_view(
     entries_data: list[tuple[str, str, str]],
     create_dashboard_eid: str | None,
+    clean_orphans_eid: str | None,
 ) -> dict[str, Any]:
     """Build a top-level overview view.
 
     Sections, in order:
     1. Explanation of what the dashboard does (always shown).
     2. Tiles per configured watchdog (or "no entries" hint).
-    3. Global "Recreate dashboards" action (when the button entity exists).
+    3. Global actions (Recreate dashboards, Clean orphans) when their
+       button entities exist. Each runs across all configured watchdogs.
     """
     sections: list[dict[str, Any]] = [
         {
@@ -337,7 +311,28 @@ def _build_overview_view(
             }
         )
 
+    action_buttons: list[dict[str, Any]] = []
     if create_dashboard_eid:
+        action_buttons.append(
+            {
+                "type": "button",
+                "entity": create_dashboard_eid,
+                "name": "Recreate dashboards",
+                "icon": "mdi:view-dashboard-edit",
+                "show_state": False,
+            }
+        )
+    if clean_orphans_eid:
+        action_buttons.append(
+            {
+                "type": "button",
+                "entity": clean_orphans_eid,
+                "name": "Clean orphans",
+                "icon": "mdi:broom",
+                "show_state": False,
+            }
+        )
+    if action_buttons:
         sections.append(
             {
                 "type": "grid",
@@ -348,13 +343,7 @@ def _build_overview_view(
                         "heading": "Actions",
                         "heading_style": "subtitle",
                     },
-                    {
-                        "type": "button",
-                        "entity": create_dashboard_eid,
-                        "name": "Recreate dashboards",
-                        "icon": "mdi:view-dashboard-edit",
-                        "show_state": False,
-                    },
+                    *action_buttons,
                 ],
             }
         )
@@ -376,6 +365,7 @@ def _generate_lovelace_config(hass: HomeAssistant) -> dict[str, Any]:
     detail_views: list[dict[str, Any]] = []
     entries_data: list[tuple[str, str, str]] = []
     overview_create_dashboard_eid: str | None = None
+    overview_clean_orphans_eid: str | None = None
 
     for entry in entries:
         coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
@@ -387,11 +377,14 @@ def _generate_lovelace_config(hass: HomeAssistant) -> dict[str, Any]:
             _LOGGER.warning("No summary sensor found for entry %s; skipping view", entry.entry_id)
             continue
 
-        # The Recreate Dashboards button is a global action — every entry's
-        # button rebuilds the whole dashboard. Pick the first one we find
-        # so the Overview can host it once instead of once per watchdog.
+        # Recreate-Dashboards and Clean-Orphans are global actions — every
+        # entry exposes its own button entity, but pressing any of them
+        # spans all watchdogs. Pick the first one we encounter so the
+        # Overview hosts each action once.
         if overview_create_dashboard_eid is None and create_dashboard_eid is not None:
             overview_create_dashboard_eid = create_dashboard_eid
+        if overview_clean_orphans_eid is None and clean_orphans_eid is not None:
+            overview_clean_orphans_eid = clean_orphans_eid
 
         entries_data.append((coordinator.label_id, coordinator.period_key, summary_eid))
         detail_views.append(
@@ -399,13 +392,19 @@ def _generate_lovelace_config(hass: HomeAssistant) -> dict[str, Any]:
                 coordinator.label_id,
                 coordinator.period_key,
                 summary_eid,
-                clean_orphans_eid,
             )
         )
 
     return {
         "title": DASHBOARD_TITLE,
-        "views": [_build_overview_view(entries_data, overview_create_dashboard_eid), *detail_views],
+        "views": [
+            _build_overview_view(
+                entries_data,
+                overview_create_dashboard_eid,
+                overview_clean_orphans_eid,
+            ),
+            *detail_views,
+        ],
     }
 
 
