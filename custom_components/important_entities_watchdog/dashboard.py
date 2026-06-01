@@ -58,23 +58,23 @@ _SILENT_NOW_TEMPLATE = (
 )
 
 _ALL_TRACKED_TEMPLATE = (
-    "{%- set summary = '__SUMMARY__' -%}"
-    "{%- set tracked = state_attr(summary, 'tracked_entities') or [] -%}"
-    "{%- set silent = state_attr(summary, 'silent_entities') or [] -%}"
-    "{%- if tracked -%}"
+    "{%- set summary = '__SUMMARY__' -%}\n"
+    "{%- set tracked = state_attr(summary, 'tracked_entities') or [] -%}\n"
+    "{%- set silent = state_attr(summary, 'silent_entities') or [] -%}\n"
+    "{%- if tracked -%}\n"
     "| Status | Entity | Last reported | Device |\n"
     "|---|---|---|---|\n"
-    "{% for eid in tracked | sort -%}"
-    "{%- set did = device_id(eid) -%}"
-    "{%- set fn = state_attr(eid, 'friendly_name') -%}"
+    "{% for eid in tracked | sort -%}\n"
+    "{% set did = device_id(eid) -%}\n"
+    "{% set fn = state_attr(eid, 'friendly_name') %}\n"
     "| {% if eid in silent %}🔴 silent{% else %}🟢 fresh{% endif %} "
     "| {% if fn %}{{ fn }}{% else %}`{{ eid }}`{% endif %} "
     "| {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} "
     "| {% if did %}[Device](/config/devices/device/{{ did }}){% else %}—{% endif %} |\n"
-    "{%- endfor -%}"
-    "{%- else -%}"
-    "No entities carry the label yet."
-    "{%- endif -%}"
+    "{% endfor %}\n"
+    "{% else %}\n"
+    "No entities carry the label yet.\n"
+    "{%- endif -%}\n"
 )
 
 _OVERVIEW_EXPLANATION = """\
