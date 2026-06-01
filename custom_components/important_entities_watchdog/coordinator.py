@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -14,6 +14,7 @@ from homeassistant.helpers.event import (
     async_track_state_report_event,
     async_track_time_interval,
 )
+from homeassistant.util import dt as dt_util
 
 from .const import CONF_LABEL, CONF_PERIOD, CONF_REALTIME, DEFAULT_REALTIME, PERIOD_OPTIONS, RECHECK_INTERVAL_SECONDS
 
@@ -58,6 +59,12 @@ class WatchdogCoordinator:
         self._source_unsubs: list[Callable[[], None]] = []
         self._tracked_entities: set[str] = set()
 
+        # When the next periodic tick is expected to fire. Updated on each
+        # tick and once at init so the summary sensor can expose it as an
+        # attribute. Approximate — driven from "now + tick_seconds" rather
+        # than HA's internal scheduler state.
+        self.next_tick_at: datetime | None = None
+
         # Instance-scoped callback lists. Do NOT make these class attributes
         # — they would leak across config entries.
         # Update callback receives the entity_id of the source that fired,
@@ -79,6 +86,7 @@ class WatchdogCoordinator:
                 timedelta(seconds=self.tick_seconds),
             )
         )
+        self.next_tick_at = dt_util.utcnow() + timedelta(seconds=self.tick_seconds)
 
         _LOGGER.debug(
             "Watchdog initialized for label=%s period=%s realtime=%s tick=%ds tracking %d entities",
@@ -160,8 +168,9 @@ class WatchdogCoordinator:
             cb(entity_id)
 
     @callback
-    def _handle_tick(self, _now) -> None:
+    def _handle_tick(self, now: datetime) -> None:
         """Periodic recompute — None signals "refresh all tracked entities"."""
+        self.next_tick_at = now + timedelta(seconds=self.tick_seconds)
         for cb in list(self._update_callbacks):
             cb(None)
 

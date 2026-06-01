@@ -83,4 +83,7 @@ class SilentCountSensor(SensorEntity):
             "period": self._coordinator.period_key,
             "period_seconds": self._coordinator.period_seconds,
             "label_id": self._coordinator.label_id,
+            "realtime": self._coordinator.realtime,
+            "next_check": self._coordinator.next_tick_at,
+            "tick_seconds": self._coordinator.tick_seconds,
         }

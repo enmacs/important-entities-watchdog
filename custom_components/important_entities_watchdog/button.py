@@ -83,7 +83,12 @@ class CleanOrphansButton(ButtonEntity):
 
 
 class CreateDashboardButton(ButtonEntity):
-    """Create or refresh the Watchdog Lovelace dashboard."""
+    """Create or refresh the Watchdog Lovelace dashboards.
+
+    Pressing this rebuilds the entire `entity-watchdog` Lovelace dashboard,
+    including the overview and a view per configured (label, period) entry —
+    not just the entry this button belongs to.
+    """
 
     _attr_entity_category = EntityCategory.CONFIG
     _attr_icon = "mdi:view-dashboard-edit"
@@ -92,7 +97,7 @@ class CreateDashboardButton(ButtonEntity):
         """Initialize the button."""
         self._coordinator = coordinator
         self._attr_unique_id = f"{coordinator.entry.entry_id}_create_dashboard"
-        self._attr_name = f"Watchdog create dashboard: {coordinator.label_id} ({coordinator.period_key})"
+        self._attr_name = f"Watchdog create dashboards: {coordinator.label_id} ({coordinator.period_key})"
         self._attr_suggested_object_id = (
             f"{DOMAIN}_create_dashboard_{slugify(coordinator.label_id)}_{coordinator.period_key}"
         )
