@@ -6,7 +6,11 @@
         "description": "Pick a label and the period after which entities are considered silent.",
         "data": {
           "label": "Label",
-          "period": "Silent threshold"
+          "period": "Silent threshold",
+          "realtime": "Real-time mode"
+        },
+        "data_description": {
+          "realtime": "Re-evaluate entity freshness on every source state event. Off by default; with this off, the watchdog only checks periodically (every 1/10 of the silent threshold), which is much cheaper for high-frequency sources."
         }
       }
     },
@@ -18,9 +22,13 @@
   "options": {
     "step": {
       "init": {
-        "title": "Change watchdog period",
+        "title": "Change watchdog settings",
         "data": {
-          "period": "Silent threshold"
+          "period": "Silent threshold",
+          "realtime": "Real-time mode"
+        },
+        "data_description": {
+          "realtime": "Re-evaluate entity freshness on every source state event. Off by default; with this off, the watchdog only checks periodically (every 1/10 of the silent threshold), which is much cheaper for high-frequency sources."
         }
       }
     }

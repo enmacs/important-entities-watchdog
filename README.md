@@ -48,12 +48,14 @@ You configure one entry per `(label, period)` combination:
 
 1. Create the label in HA (Settings → Labels) and apply it to the
    entities you want to watch.
-2. Add the integration. Pick the label and a period (10m, 1h, 6h, 12h, 24h, 7d).
+2. Add the integration. Pick the label, a period (10m, 1h, 6h, 12h, 24h, 7d),
+   and optionally enable **Real-time mode**.
 3. Repeat for additional `(label, period)` combinations if you want
    different thresholds for different groups of devices.
 
-The period can be changed later via the integration's Configure button
-without losing history (entities keep their unique_id across reloads).
+Period and real-time mode can be changed later via the integration's
+Configure button without losing history (entities keep their unique_id
+across reloads).
 
 ## Sensors created per config entry
 
@@ -72,9 +74,27 @@ the integration creates:
 Attributes on the summary sensor include `silent_entities`,
 `tracked_entities`, `tracked_count`, `period`, and `label_id`.
 
-The integration reacts to source updates immediately (via state-change and
-state-report events) and re-evaluates every 60 s so silent entities flip
-within at most one minute of crossing the threshold.
+### Real-time mode vs. polling
+
+Two evaluation modes are available, chosen per config entry:
+
+- **Real-time mode (opt-in).** The integration subscribes to state-change
+  and state-report events for every tracked source and updates the
+  matching binary sensor immediately. A 60 s tick covers the
+  "going silent" case (no event fires when a device simply stops
+  reporting). Use this for short periods (≤ 1 h) or when you want the
+  UI to flip the instant a source comes back online.
+- **Polling mode (default).** No event subscription. The integration
+  re-evaluates all binary sensors on a tick of `period / 10` — e.g.
+  every ~2.4 h for a 24 h period, every 6 min for a 1 h period, every
+  60 s for a 10 min period. Detection of a stale or returned source
+  is delayed by at most one tick. Dramatically cheaper for
+  high-frequency sources (a sensor that reports every second would
+  otherwise trigger a state-write per second in real-time mode).
+
+The freshness check itself is identical in both modes: it compares
+`now - state.last_reported` against the configured period. The mode
+only changes *when* that comparison runs.
 
 ## Example automation
 
@@ -108,9 +128,10 @@ actions:
   resets. Entities will look stale until they next report. Acceptable for
   most use cases; if it matters, add an uptime grace condition to your
   notification.
-- **Coordinator tick interval.** Hard-coded to 60 seconds. Sufficient for
-  hour-scale periods. Reduce if you ever use periods under 5 minutes
-  (not currently exposed via UI).
+- **Polling mode detection delay.** In polling mode the tick is
+  `period / 10`, so a stale entity is detected up to that delay after
+  crossing the threshold. Enable real-time mode if you need faster
+  reaction.
 - **Per-entity uptime % is not yet implemented.** Planned for a later
   version, likely via programmatic `history_stats` integration.
 - **HA event names.** This integration listens for

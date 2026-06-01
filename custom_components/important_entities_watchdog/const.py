@@ -6,6 +6,7 @@ DOMAIN = "important_entities_watchdog"
 
 CONF_LABEL = "label"
 CONF_PERIOD = "period"
+CONF_REALTIME = "realtime"
 
 # Period choices shown in the UI -> seconds
 PERIOD_OPTIONS: dict[str, int] = {
@@ -18,8 +19,8 @@ PERIOD_OPTIONS: dict[str, int] = {
 }
 
 DEFAULT_PERIOD = "24h"
+DEFAULT_REALTIME = False
 
-# How often the coordinator re-evaluates staleness even when no source updates occur.
-# Needed because "going stale" is the absence of events; nothing fires when a device
-# crosses the threshold by simply not reporting.
+# Recheck interval used in real-time mode. In non-real-time mode the tick is
+# derived from the period (period / 10) — see WatchdogCoordinator.
 RECHECK_INTERVAL_SECONDS = 60

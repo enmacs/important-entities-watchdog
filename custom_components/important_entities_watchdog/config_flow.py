@@ -11,7 +11,7 @@ from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.core import callback
 from homeassistant.helpers import label_registry as lr
 
-from .const import CONF_LABEL, CONF_PERIOD, DEFAULT_PERIOD, DOMAIN, PERIOD_OPTIONS
+from .const import CONF_LABEL, CONF_PERIOD, CONF_REALTIME, DEFAULT_PERIOD, DEFAULT_REALTIME, DOMAIN, PERIOD_OPTIONS
 
 
 class WatchdogConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -44,6 +44,7 @@ class WatchdogConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_LABEL): vol.In(labels),
                 vol.Required(CONF_PERIOD, default=DEFAULT_PERIOD): vol.In(list(PERIOD_OPTIONS)),
+                vol.Required(CONF_REALTIME, default=DEFAULT_REALTIME): bool,
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -69,10 +70,14 @@ class WatchdogOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        current = self.config_entry.options.get(CONF_PERIOD, self.config_entry.data[CONF_PERIOD])
+        current_period = self.config_entry.options.get(CONF_PERIOD, self.config_entry.data[CONF_PERIOD])
+        current_realtime = self.config_entry.options.get(
+            CONF_REALTIME, self.config_entry.data.get(CONF_REALTIME, DEFAULT_REALTIME)
+        )
         schema = vol.Schema(
             {
-                vol.Required(CONF_PERIOD, default=current): vol.In(list(PERIOD_OPTIONS)),
+                vol.Required(CONF_PERIOD, default=current_period): vol.In(list(PERIOD_OPTIONS)),
+                vol.Required(CONF_REALTIME, default=current_realtime): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

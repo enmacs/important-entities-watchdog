@@ -15,7 +15,7 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 
-from .const import CONF_LABEL, CONF_PERIOD, PERIOD_OPTIONS, RECHECK_INTERVAL_SECONDS
+from .const import CONF_LABEL, CONF_PERIOD, CONF_REALTIME, DEFAULT_REALTIME, PERIOD_OPTIONS, RECHECK_INTERVAL_SECONDS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,11 +38,21 @@ class WatchdogCoordinator:
         self.entry = entry
         self.label_id: str = entry.data[CONF_LABEL]
 
-        # Options override entry data so period can be changed without
+        # Options override entry data so settings can be changed without
         # recreating the entry.
         period_key = entry.options.get(CONF_PERIOD, entry.data[CONF_PERIOD])
         self.period_key: str = period_key
         self.period_seconds: int = PERIOD_OPTIONS[period_key]
+
+        # Real-time mode: subscribe to source state events for immediate
+        # re-evaluation. When disabled, we only tick periodically — much
+        # cheaper for high-frequency sources and long periods.
+        self.realtime: bool = entry.options.get(CONF_REALTIME, entry.data.get(CONF_REALTIME, DEFAULT_REALTIME))
+        # Tick interval: fixed 60s in real-time mode (the events do the
+        # heavy lifting, the tick only catches "going silent"); otherwise
+        # period/10 — fine-grained enough to detect staleness within 10%
+        # of the configured period.
+        self.tick_seconds: int = RECHECK_INTERVAL_SECONDS if self.realtime else max(1, self.period_seconds // 10)
 
         self._unsubs: list[Callable[[], None]] = []
         self._source_unsubs: list[Callable[[], None]] = []
@@ -66,14 +76,16 @@ class WatchdogCoordinator:
             async_track_time_interval(
                 self.hass,
                 self._handle_tick,
-                timedelta(seconds=RECHECK_INTERVAL_SECONDS),
+                timedelta(seconds=self.tick_seconds),
             )
         )
 
         _LOGGER.debug(
-            "Watchdog initialized for label=%s period=%s tracking %d entities",
+            "Watchdog initialized for label=%s period=%s realtime=%s tick=%ds tracking %d entities",
             self.label_id,
             self.period_key,
+            self.realtime,
+            self.tick_seconds,
             len(self._tracked_entities),
         )
 
@@ -116,15 +128,15 @@ class WatchdogCoordinator:
     def _sync_source_subscriptions(self) -> None:
         """(Re)subscribe to state-change and state-report events for tracked sources.
 
-        Rebuilds the subscription on every membership change. Cheap because
-        HA fans out the event to all listeners regardless; one subscription
-        with N entity_ids is the standard pattern.
+        Skipped entirely when real-time mode is off — staleness is then
+        evaluated only on the periodic tick, which is the whole point of
+        the low-load mode.
         """
         for unsub in self._source_unsubs:
             unsub()
         self._source_unsubs.clear()
 
-        if not self._tracked_entities:
+        if not self.realtime or not self._tracked_entities:
             return
 
         entities = list(self._tracked_entities)
