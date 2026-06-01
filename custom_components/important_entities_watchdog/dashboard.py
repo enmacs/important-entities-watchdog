@@ -19,7 +19,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import entity_registry as er, label_registry as lr
 from homeassistant.util import slugify
 
 from .const import DOMAIN
@@ -66,7 +66,7 @@ _ALL_TRACKED_TEMPLATE = (
     "|---|---|---|---|\n"
     "{% for eid in tracked | sort -%}\n"
     "{% set did = device_id(eid) -%}\n"
-    "{% set fn = state_attr(eid, 'friendly_name') %}\n"
+    "{% set fn = state_attr(eid, 'friendly_name') -%}\n"
     "| {% if eid in silent %}🔴 silent{% else %}🟢 fresh{% endif %} "
     "| {% if fn %}{{ fn }}{% else %}`{{ eid }}`{% endif %} "
     "| {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} "
@@ -157,11 +157,17 @@ def _get_entry_key_entities(hass: HomeAssistant, entry: ConfigEntry) -> tuple[st
 
 
 def _build_view(
-    label: str,
+    label_id: str,
+    label_name: str,
     period: str,
     summary_eid: str,
 ) -> dict[str, Any]:
-    """Build a sections view for one (label, period) entry."""
+    """Build a sections view for one (label, period) entry.
+
+    `label_id` is the registry slug — used for entity-id filters and the
+    view path (URL stability). `label_name` is the human-readable label
+    name from the label registry — used only for the displayed view title.
+    """
     header_info = _HEADER_INFO_TEMPLATE.replace("__SUMMARY__", summary_eid)
     silent_now = _SILENT_NOW_TEMPLATE.replace("__SUMMARY__", summary_eid)
     all_tracked = _ALL_TRACKED_TEMPLATE.replace("__SUMMARY__", summary_eid)
@@ -209,7 +215,7 @@ def _build_view(
                         "title": f"Tracked sources ({period})",
                         "hours_to_show": 24,
                     },
-                    "filter": {"include": [{"entity_id": f"binary_sensor.watchdog_{slugify(label)}_*_{period}"}]},
+                    "filter": {"include": [{"entity_id": f"binary_sensor.watchdog_{slugify(label_id)}_*_{period}"}]},
                     "show_empty": False,
                     "grid_options": {"columns": 48, "rows": "auto"},
                 }
@@ -219,9 +225,9 @@ def _build_view(
     ]
 
     return {
-        "title": f"Watchdog {label} {period}",
+        "title": f"Watchdog {label_name}",
         "icon": "",
-        "path": f"watchdog-{slugify(label)}-{period}",
+        "path": f"watchdog-{slugify(label_id)}-{period}",
         "type": "sections",
         "badges": [
             {
@@ -249,7 +255,7 @@ def _build_view(
 
 
 def _build_overview_view(
-    entries_data: list[tuple[str, str, str]],
+    entries_data: list[tuple[str, str, str, str]],
     create_dashboard_eid: str | None,
     clean_orphans_eid: str | None,
 ) -> dict[str, Any]:
@@ -284,16 +290,16 @@ def _build_overview_view(
                 "heading_style": "title",
             }
         ]
-        for label, period, summary_eid in entries_data:
+        for label_id, label_name, period, summary_eid in entries_data:
             tile_cards.append(
                 {
                     "type": "tile",
                     "entity": summary_eid,
-                    "name": f"{label} ({period})",
+                    "name": f"{label_name} ({period})",
                     "color": "orange",
                     "tap_action": {
                         "action": "navigate",
-                        "navigation_path": f"/{DASHBOARD_URL_PATH}/watchdog-{slugify(label)}-{period}",
+                        "navigation_path": f"/{DASHBOARD_URL_PATH}/watchdog-{slugify(label_id)}-{period}",
                     },
                 }
             )
@@ -362,8 +368,9 @@ def _build_overview_view(
 def _generate_lovelace_config(hass: HomeAssistant) -> dict[str, Any]:
     """Build a Lovelace dashboard config from all active config entries."""
     entries = hass.config_entries.async_entries(DOMAIN)
+    label_reg = lr.async_get(hass)
     detail_views: list[dict[str, Any]] = []
-    entries_data: list[tuple[str, str, str]] = []
+    entries_data: list[tuple[str, str, str, str]] = []
     overview_create_dashboard_eid: str | None = None
     overview_clean_orphans_eid: str | None = None
 
@@ -386,10 +393,17 @@ def _generate_lovelace_config(hass: HomeAssistant) -> dict[str, Any]:
         if overview_clean_orphans_eid is None and clean_orphans_eid is not None:
             overview_clean_orphans_eid = clean_orphans_eid
 
-        entries_data.append((coordinator.label_id, coordinator.period_key, summary_eid))
+        # Display the human-readable label name when available; fall back
+        # to the label_id for any orphaned entry whose label has been
+        # deleted from the registry.
+        label_obj = label_reg.async_get_label(coordinator.label_id)
+        label_name = label_obj.name if label_obj else coordinator.label_id
+
+        entries_data.append((coordinator.label_id, label_name, coordinator.period_key, summary_eid))
         detail_views.append(
             _build_view(
                 coordinator.label_id,
+                label_name,
                 coordinator.period_key,
                 summary_eid,
             )
