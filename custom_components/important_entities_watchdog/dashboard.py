@@ -31,46 +31,51 @@ DASHBOARD_TITLE = "Entity Watchdog"
 DASHBOARD_ICON = "mdi:radar"
 
 
-_SILENT_NOW_TEMPLATE = """\
-{% set summary = '__SUMMARY__' %}
-{% set silent = state_attr(summary, 'silent_entities') or [] %}
-{% if silent %}
-**{{ silent | count }} silent**
+_SILENT_NOW_TEMPLATE = (
+    "{%- set summary = '__SUMMARY__' -%}"
+    "{%- set silent = state_attr(summary, 'silent_entities') or [] -%}"
+    "{%- if silent -%}"
+    "**{{ silent | count }} silent**\n\n"
+    "| Status | Entity | Last reported | Device |\n"
+    "|---|---|---|---|\n"
+    "{%- set ns = namespace(rows=[]) -%}"
+    "{%- for eid in silent -%}"
+    "{%- set ts = states[eid].last_reported.timestamp() if states[eid] and states[eid].last_reported else 0 -%}"
+    "{%- set ns.rows = ns.rows + [{'eid': eid, 'ts': ts}] -%}"
+    "{%- endfor -%}"
+    "{%- for row in ns.rows | sort(attribute='ts') -%}"
+    "{%- set eid = row.eid -%}"
+    "{%- set did = device_id(eid) -%}"
+    "{%- set fn = state_attr(eid, 'friendly_name') -%}"
+    "| 🔴 "
+    "| {% if fn %}{{ fn }}{% else %}`{{ eid }}`{% endif %} "
+    "| {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} "
+    "| {% if did %}[Device](/config/devices/device/{{ did }}){% else %}—{% endif %} |\n"
+    "{%- endfor -%}"
+    "{%- else -%}"
+    "All tracked entities reporting within period."
+    "{%- endif -%}"
+)
 
-| Status | Entity | Last reported | Device |
-|---|---|---|---|
-{% set ns = namespace(rows=[]) %}
-{% for eid in silent %}
-  {% set ts = states[eid].last_reported.timestamp() if states[eid] and states[eid].last_reported else 0 %}
-  {% set ns.rows = ns.rows + [{'eid': eid, 'ts': ts}] %}
-{% endfor %}
-{% for row in ns.rows | sort(attribute='ts') -%}
-  {%- set eid = row.eid -%}
-  {%- set did = device_id(eid) -%}
-  {%- set fn = state_attr(eid, 'friendly_name') -%}
-| 🔴 | {% if fn %}{{ fn }}{% else %}`{{ eid }}`{% endif %} | {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} | {% if did %}[Device](/config/devices/device/{{ did }}){% else %}—{% endif %} |
-{% endfor %}
-{% else %}
-All tracked entities reporting within period.
-{% endif %}
-"""
-
-_ALL_TRACKED_TEMPLATE = """\
-{% set summary = '__SUMMARY__' %}
-{% set tracked = state_attr(summary, 'tracked_entities') or [] %}
-{% set silent = state_attr(summary, 'silent_entities') or [] %}
-{% if tracked %}
-| Status | Entity | Last reported | Device |
-|---|---|---|---|
-{% for eid in tracked | sort -%}
-  {%- set did = device_id(eid) -%}
-  {%- set fn = state_attr(eid, 'friendly_name') -%}
-| {% if eid in silent %}🔴 silent{% else %}🟢 fresh{% endif %} | {% if fn %}{{ fn }}{% else %}`{{ eid }}`{% endif %} | {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} | {% if did %}[Device](/config/devices/device/{{ did }}){% else %}—{% endif %} |
-{% endfor %}
-{% else %}
-No entities carry the label yet.
-{% endif %}
-"""
+_ALL_TRACKED_TEMPLATE = (
+    "{%- set summary = '__SUMMARY__' -%}"
+    "{%- set tracked = state_attr(summary, 'tracked_entities') or [] -%}"
+    "{%- set silent = state_attr(summary, 'silent_entities') or [] -%}"
+    "{%- if tracked -%}"
+    "| Status | Entity | Last reported | Device |\n"
+    "|---|---|---|---|\n"
+    "{%- for eid in tracked | sort -%}"
+    "{%- set did = device_id(eid) -%}"
+    "{%- set fn = state_attr(eid, 'friendly_name') -%}"
+    "| {% if eid in silent %}🔴 silent{% else %}🟢 fresh{% endif %} "
+    "| {% if fn %}{{ fn }}{% else %}`{{ eid }}`{% endif %} "
+    "| {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} "
+    "| {% if did %}[Device](/config/devices/device/{{ did }}){% else %}—{% endif %} |\n"
+    "{%- endfor -%}"
+    "{%- else -%}"
+    "No entities carry the label yet."
+    "{%- endif -%}"
+)
 
 _OVERVIEW_EXPLANATION = """\
 ## About Entity Watchdog
