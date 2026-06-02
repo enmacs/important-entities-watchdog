@@ -96,31 +96,127 @@ The freshness check itself is identical in both modes: it compares
 `now - state.last_reported` against the configured period. The mode
 only changes *when* that comparison runs.
 
-## Example automation
+## Example automations
 
-Daily 9am notification of silent entities:
+Two complementary templates: a daily morning report listing everything
+currently silent, and an instant alert that fires whenever a new entity
+goes silent. Use either or both. Create one copy per `(label, period)`
+combination — only the variables at the top need editing.
+
+### Daily morning report
+
+A 09:00 push notification listing every labeled entity whose last report
+is older than the configured watchdog period:
 
 ```yaml
-alias: Daily silent device report
+alias: "Daily availability check: <label> / <period>"
+description: >-
+  Flags entities labeled '<label>' whose last_reported is older than <period>.
+
+variables:
+  watchdog_label: "Availability check: daily"
+  watchdog_period: { hours: 24 }
+  watchdog_period_text: "24h"
+  notify_service: notify.mobile_app_pixel_6a
+
 triggers:
   - trigger: time
     at: "09:00:00"
+
 actions:
+  - variables:
+      stale_ids: >-
+        {{ label_entities(watchdog_label)
+           | expand
+           | selectattr('last_reported', 'lt', now() - timedelta(**watchdog_period))
+           | map(attribute='entity_id')
+           | list }}
   - if:
-      - condition: numeric_state
-        entity_id: sensor.important_entities_watchdog_silent_critical_24h
-        above: 0
+      - condition: template
+        value_template: "{{ stale_ids | count > 0 }}"
     then:
-      - action: notify.mobile_app_pixel_6a
+      - action: "{{ notify_service }}"
         data:
-          title: >-
-            {{ states('sensor.important_entities_watchdog_silent_critical_24h') }}
-            device(s) silent >24h
+          title: "⚠️ {{ stale_ids | count }} device(s) silent >{{ watchdog_period_text }}"
           message: >-
-            {{ state_attr('sensor.important_entities_watchdog_silent_critical_24h',
-                          'silent_entities')
-               | map('state_attr', 'friendly_name') | list | join(', ') }}
+            {% for eid in stale_ids -%}
+            {%- set s = states[eid] -%}
+            {%- set hrs = ((now() - s.last_reported).total_seconds() / 3600) | int -%}
+            • {{ s.attributes.friendly_name or eid }} — {% if hrs < 48 %}{{ hrs }}h{% else %}{{ (hrs / 24) | int }}d{% endif %}
+            {% endfor %}
+
+mode: single
 ```
+
+Adjust `watchdog_period` and `watchdog_period_text` per period:
+`{minutes: 10}` / `"10m"`, `{hours: 1}` / `"1h"`, `{hours: 6}` / `"6h"`,
+`{days: 7}` / `"7d"`. `watchdog_label` is the **display name** of the
+Home Assistant label (e.g. `Availability check: daily`), not the
+slugified id. The template reads entities by label and compares
+`last_reported` directly, so the same automation works regardless of
+which watchdog entry covers them.
+
+### Instant alert on new silent entities
+
+Fires whenever the watchdog's summary sensor adds new entries to its
+`silent_entities` attribute, so a push arrives as soon as something
+goes silent — no need to wait for the morning report. Notifies only
+about the **newly** silent entities (diff against the previous state)
+and suppresses notifications during the first 10 minutes after a Home
+Assistant restart (when `last_reported` is briefly empty for everyone):
+
+```yaml
+alias: "Watchdog instant alert: <label> / <period>"
+description: >-
+  Notifies as soon as additional labeled entities go silent.
+  Suppressed during the first 10 min after a Home Assistant restart.
+
+variables:
+  watchdog_period_text: "24h"
+  notify_service: notify.mobile_app_pixel_6a
+
+triggers:
+  - trigger: state
+    entity_id: sensor.important_entities_watchdog_silent_critical_24h
+    attribute: silent_entities
+
+conditions:
+  # Restart guard: only fire 10 min after HA boot.
+  # Requires the built-in Uptime integration (sensor.uptime). If it's
+  # missing, the default keeps the automation active without protection.
+  - condition: template
+    value_template: >-
+      {{ (now() - (states('sensor.uptime')
+         | as_datetime(default=now() - timedelta(days=1)))).total_seconds() > 600 }}
+  # Only fire when the silent count actually went up — skips swap cases
+  # where one entity returns while another goes silent.
+  - condition: template
+    value_template: >-
+      {{ trigger.to_state.state | int(0) > trigger.from_state.state | int(0) }}
+
+actions:
+  - variables:
+      previous: "{{ trigger.from_state.attributes.silent_entities or [] }}"
+      current:  "{{ trigger.to_state.attributes.silent_entities or [] }}"
+      newly_silent: "{{ current | reject('in', previous) | list }}"
+  - action: "{{ notify_service }}"
+    data:
+      title: "⚠️ {{ newly_silent | count }} device(s): silent (>{{ watchdog_period_text }})"
+      message: >-
+        {% for eid in newly_silent -%}
+        • {{ state_attr(eid, 'friendly_name') or eid }}
+        {% endfor %}
+
+mode: queued
+max: 10
+```
+
+Replace `critical_24h` in the trigger's `entity_id` with your watchdog's
+slug. The trigger's `entity_id` cannot be templated, so the summary
+sensor reference lives in the trigger itself rather than in
+`variables:`. Latency depends on the watchdog's mode: *real-time* fires
+the moment a source crosses the threshold; *polling* fires at the next
+tick (`period / 10`).
 
 ## Known limitations / things to verify
 
