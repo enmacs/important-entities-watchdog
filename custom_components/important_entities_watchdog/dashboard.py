@@ -626,7 +626,6 @@ async def async_create_or_update_dashboard(hass: HomeAssistant) -> None:
         frontend_url_path=DASHBOARD_URL_PATH,
         config={"mode": MODE_STORAGE},
         require_admin=False,
-        show_in_sidebar=True,
     )
 
     await lovelace_data.dashboards[DASHBOARD_URL_PATH].async_save(config)
