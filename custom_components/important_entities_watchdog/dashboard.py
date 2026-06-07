@@ -224,6 +224,7 @@ longer carries its watchdog's label.
 
 _HEADER_INFO_TEMPLATE = (
     "{% set summary = '__SUMMARY__' %}"
+    "**Label:** __LABEL__<br>"
     "**Mode:** {{ 'Real-time' if state_attr(summary, 'realtime') else 'Polling' }}<br>"
     "{% set ti = state_attr(summary, 'tick_seconds') %}"
     "{% if ti %}**Check interval:** every "
@@ -236,7 +237,7 @@ _HEADER_INFO_TEMPLATE = (
     "{{ ti_hours }} hour{% if ti_hours != 1.0 %}s{% endif %}"
     "{% endif %}<br>"
     "{% endif %}"
-    "**Last update:** {{ relative_time(states[summary].last_updated) }} ago"
+    "**Last check:** {{ relative_time(states[summary].last_updated) }} ago"
     "{% set nc = state_attr(summary, 'next_check') %}"
     "{% if nc %}<br>**Next check:** "
     "{% set secs = ((as_timestamp(nc) - as_timestamp(now())) | int) %}"
@@ -284,7 +285,7 @@ def _build_view(
     view path (URL stability). `label_name` is the human-readable label
     name from the label registry — used only for the displayed view title.
     """
-    header_info = _HEADER_INFO_TEMPLATE.replace("__SUMMARY__", summary_eid)
+    header_info = _HEADER_INFO_TEMPLATE.replace("__SUMMARY__", summary_eid).replace("__LABEL__", label_name)
     silent_now = _SILENT_NOW_TEMPLATE.replace("__SUMMARY__", summary_eid)
     all_tracked = _ALL_TRACKED_TEMPLATE.replace("__SUMMARY__", summary_eid)
 

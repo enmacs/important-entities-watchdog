@@ -10,6 +10,7 @@ CONF_REALTIME = "realtime"
 
 # Period choices shown in the UI -> seconds
 PERIOD_OPTIONS: dict[str, int] = {
+    "1m": 60,
     "10m": 600,
     "1h": 3600,
     "6h": 21600,

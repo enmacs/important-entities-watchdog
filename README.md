@@ -48,7 +48,7 @@ You configure one entry per `(label, period)` combination:
 
 1. Create the label in HA (Settings → Labels) and apply it to the
    entities you want to watch.
-2. Add the integration. Pick the label, a period (10m, 1h, 6h, 12h, 24h, 7d),
+2. Add the integration. Pick the label, a period (1m, 10m, 1h, 6h, 12h, 24h, 7d),
    and optionally enable **Real-time mode**.
 3. Repeat for additional `(label, period)` combinations if you want
    different thresholds for different groups of devices.
@@ -149,7 +149,7 @@ mode: single
 ```
 
 Adjust `watchdog_period` and `watchdog_period_text` per period:
-`{minutes: 10}` / `"10m"`, `{hours: 1}` / `"1h"`, `{hours: 6}` / `"6h"`,
+`{minutes: 1}` / `"1m"`, `{minutes: 10}` / `"10m"`, `{hours: 1}` / `"1h"`, `{hours: 6}` / `"6h"`,
 `{days: 7}` / `"7d"`. `watchdog_label` is the **display name** of the
 Home Assistant label (e.g. `Availability check: daily`), not the
 slugified id. The template reads entities by label and compares
