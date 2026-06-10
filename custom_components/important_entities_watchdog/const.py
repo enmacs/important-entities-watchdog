@@ -8,18 +8,12 @@ CONF_LABEL = "label"
 CONF_PERIOD = "period"
 CONF_REALTIME = "realtime"
 
-# Period choices shown in the UI -> seconds
-PERIOD_OPTIONS: dict[str, int] = {
-    "1m": 60,
-    "10m": 600,
-    "1h": 3600,
-    "6h": 21600,
-    "12h": 43200,
-    "24h": 86400,
-    "7d": 604800,
-}
+# The silent threshold is a freely configurable duration, stored as seconds.
+DEFAULT_PERIOD_SECONDS = 86400  # 24h
+# Floor: the periodic tick is period / 10, so a tiny period would poll very
+# aggressively. 60s keeps the fastest tick at ~6s.
+MIN_PERIOD_SECONDS = 60
 
-DEFAULT_PERIOD = "24h"
 DEFAULT_REALTIME = False
 
 # Recheck interval used in real-time mode. In non-real-time mode the tick is

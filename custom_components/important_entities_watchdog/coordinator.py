@@ -8,6 +8,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryError
 from homeassistant.helpers import entity_registry as er, label_registry as lr
 from homeassistant.helpers.event import (
     async_track_state_change_event,
@@ -16,7 +17,8 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_LABEL, CONF_PERIOD, CONF_REALTIME, DEFAULT_REALTIME, PERIOD_OPTIONS, RECHECK_INTERVAL_SECONDS
+from .const import CONF_LABEL, CONF_PERIOD, CONF_REALTIME, DEFAULT_REALTIME, RECHECK_INTERVAL_SECONDS
+from .duration import format_period
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,10 +46,18 @@ class WatchdogCoordinator:
         self.label_name: str = label.name if label else self.label_id
 
         # Options override entry data so settings can be changed without
-        # recreating the entry.
-        period_key = entry.options.get(CONF_PERIOD, entry.data[CONF_PERIOD])
-        self.period_key: str = period_key
-        self.period_seconds: int = PERIOD_OPTIONS[period_key]
+        # recreating the entry. The period is stored as an integer number of
+        # seconds; period_key is the derived canonical slug ("1h30m") used for
+        # ids/titles. Legacy entries stored a string key ("10m") instead — those
+        # are no longer supported and must be recreated (no migration by design).
+        raw_period = entry.options.get(CONF_PERIOD, entry.data[CONF_PERIOD])
+        try:
+            self.period_seconds: int = int(raw_period)
+        except (TypeError, ValueError) as err:
+            raise ConfigEntryError(
+                f"Watchdog entry has a legacy period value {raw_period!r}; please remove and re-add this watchdog."
+            ) from err
+        self.period_key: str = format_period(self.period_seconds)
 
         # Real-time mode: subscribe to source state events for immediate
         # re-evaluation. When disabled, we only tick periodically — much

@@ -7,8 +7,14 @@
         "data": {
           "label": "Label",
           "period": "Silent threshold"
+        },
+        "data_description": {
+          "period": "How long an entity may stay silent (or a connectivity device unreachable) before it is flagged. Minimum 1 minute."
         }
       }
+    },
+    "error": {
+      "period_too_short": "The silent threshold must be at least 1 minute."
     },
     "abort": {
       "already_configured": "This label and period combination is already configured.",
@@ -20,9 +26,16 @@
       "init": {
         "title": "Change watchdog period",
         "data": {
-          "period": "Silent threshold"
+          "period": "Silent threshold",
+          "realtime": "Real-time mode"
+        },
+        "data_description": {
+          "period": "How long an entity may stay silent before it is flagged. Minimum 1 minute."
         }
       }
+    },
+    "error": {
+      "period_too_short": "The silent threshold must be at least 1 minute."
     }
   }
 }

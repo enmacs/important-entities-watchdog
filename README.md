@@ -48,8 +48,9 @@ You configure one entry per `(label, period)` combination:
 
 1. Create the label in HA (Settings → Labels) and apply it to the
    entities you want to watch.
-2. Add the integration. Pick the label, a period (1m, 10m, 1h, 6h, 12h, 24h, 7d),
-   and optionally enable **Real-time mode**.
+2. Add the integration. Pick the label and a **silent threshold** — any
+   duration you like (days/hours/minutes/seconds), minimum 1 minute — and
+   optionally enable **Real-time mode**.
 3. Repeat for additional `(label, period)` combinations if you want
    different thresholds for different groups of devices.
 
@@ -59,14 +60,16 @@ across reloads).
 
 ## Sensors created per config entry
 
-For a label `critical` (label_id) with period "24h" applied to N entities,
-the integration creates:
+For a label `critical` (label_id) with a 24-hour threshold applied to N
+entities, the integration creates (the trailing token is the **canonical
+duration slug** — the compact form of whatever threshold you chose, e.g.
+24h → `1d`, 30 minutes → `30m`, 90 minutes → `1h30m`):
 
-- N × `binary_sensor.important_entities_watchdog_critical_<source>_24h`
+- N × `binary_sensor.important_entities_watchdog_critical_<source>_1d`
   — ON when fresh, OFF when silent
-- 1 × `sensor.important_entities_watchdog_silent_critical_24h` — count of
+- 1 × `sensor.important_entities_watchdog_silent_critical_1d` — count of
   silent entities
-- 1 × `button.important_entities_watchdog_clean_orphans_critical_24h` —
+- 1 × `button.important_entities_watchdog_clean_orphans_critical_1d` —
   removes binary_sensor registry entries whose source is no longer labeled.
   Valid sensors keep their history, friendly names, and area assignments.
   Filed under the Config entity category so it stays out of dashboards.
