@@ -340,7 +340,10 @@ def _build_view(
                         "title": f"Tracked sources ({period})",
                         "hours_to_show": 24,
                     },
-                    "filter": {"include": [{"entity_id": f"binary_sensor.watchdog_{slugify(label_id)}_*_{period}"}]},
+                    # Match this watchdog's own per-source binary sensors. The object_id
+                    # is "{DOMAIN}_{label}_{source}_{period}" (see binary_sensor.py), so the
+                    # prefix must be the full DOMAIN — "watchdog_" alone matched nothing.
+                    "filter": {"include": [{"entity_id": f"binary_sensor.{DOMAIN}_{slugify(label_id)}_*_{period}"}]},
                     "show_empty": False,
                     "grid_options": {"columns": 48, "rows": "auto"},
                 }
