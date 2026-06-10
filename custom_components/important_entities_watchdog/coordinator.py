@@ -8,7 +8,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import entity_registry as er, label_registry as lr
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_state_report_event,
@@ -38,6 +38,10 @@ class WatchdogCoordinator:
         self.hass = hass
         self.entry = entry
         self.label_id: str = entry.data[CONF_LABEL]
+        # Human-readable label name for display (entity names, dashboard).
+        # Falls back to the slug if the label was deleted from the registry.
+        label = lr.async_get(hass).async_get_label(self.label_id)
+        self.label_name: str = label.name if label else self.label_id
 
         # Options override entry data so settings can be changed without
         # recreating the entry.

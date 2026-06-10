@@ -36,12 +36,15 @@ _SILENT_NOW_TEMPLATE = (
     "{%- set silent = state_attr(summary, 'silent_entities') or [] -%}"
     "{%- if silent -%}"
     "**{{ silent | count }} silent**\n\n"
-    "| Status | Entity | Last reported | Device |\n"
-    "|---|---|---|---|\n"
+    "| Status | Entity | Check | Silent for | Device |\n"
+    "|---|---|---|---|---|\n"
     "{% set ns = namespace(rows=[]) -%}"
     "{%- for eid in silent -%}"
-    "{%- set ts = states[eid].last_reported.timestamp() if states[eid] and states[eid].last_reported else 0 -%}"
-    "{%- set ns.rows = ns.rows + [{'eid': eid, 'ts': ts}] -%}"
+    "{%- set s = states[eid] -%}"
+    "{%- set conn = state_attr(eid, 'device_class') == 'connectivity' -%}"
+    "{%- set since = (s.last_changed if conn else (s.last_reported or s.last_updated)) if s else none -%}"
+    "{%- set ts = since.timestamp() if since else 0 -%}"
+    "{%- set ns.rows = ns.rows + [{'eid': eid, 'ts': ts, 'conn': conn, 'since': since}] -%}"
     "{%- endfor -%}"
     "{%- for row in ns.rows | sort(attribute='ts') -%}"
     "{%- set eid = row.eid -%}"
@@ -49,9 +52,12 @@ _SILENT_NOW_TEMPLATE = (
     "{%- set fn = state_attr(eid, 'friendly_name') -%}"
     "| 🔴 "
     "| {% if fn %}{{ fn }}{% else %}`{{ eid }}`{% endif %} "
-    "| {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} "
+    "| {{ 'Reachability' if row.conn else 'Reporting' }} "
+    "| {% if row.since %}{{ relative_time(row.since) }}{% else %}—{% endif %} "
     "| {% if did %}[Device](/config/devices/device/{{ did }}){% else %}—{% endif %} |\n"
-    "{%- endfor -%}"
+    # Keep the row's trailing newline (no left-trim) so multiple rows don't
+    # collapse onto one line and break the markdown table.
+    "{% endfor -%}"
     "{%- else -%}"
     "All tracked entities reporting within period."
     "{%- endif -%}"
@@ -62,13 +68,15 @@ _ALL_TRACKED_TEMPLATE = (
     "{%- set tracked = state_attr(summary, 'tracked_entities') or [] -%}\n"
     "{%- set silent = state_attr(summary, 'silent_entities') or [] -%}\n"
     "{%- if tracked -%}\n"
-    "| Status | Entity | Last reported | Device |\n"
-    "|---|---|---|---|\n"
+    "| Status | Entity | Check | Last report | Device |\n"
+    "|---|---|---|---|---|\n"
     "{% for eid in tracked | sort -%}\n"
     "{% set did = device_id(eid) -%}\n"
     "{% set fn = state_attr(eid, 'friendly_name') -%}\n"
+    "{% set conn = state_attr(eid, 'device_class') == 'connectivity' -%}\n"
     "| {% if eid in silent %}🔴 silent{% else %}🟢 fresh{% endif %} "
     "| {% if fn %}{{ fn }}{% else %}`{{ eid }}`{% endif %} "
+    "| {{ 'Reachability' if conn else 'Reporting' }} "
     "| {% if states[eid] and states[eid].last_reported %}{{ relative_time(states[eid].last_reported) }} ago{% else %}—{% endif %} "
     "| {% if did %}[Device](/config/devices/device/{{ did }}){% else %}—{% endif %} |\n"
     "{% endfor %}\n"
@@ -342,7 +350,9 @@ def _build_view(
     ]
 
     return {
-        "title": f"Watchdog {label_name}",
+        # Use the label name verbatim. Users often name labels "Watchdog 10mins",
+        # so prefixing "Watchdog " here would double it ("Watchdog Watchdog 10mins").
+        "title": label_name,
         "icon": "",
         "path": f"watchdog-{slugify(label_id)}-{period}",
         "type": "sections",

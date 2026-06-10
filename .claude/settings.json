@@ -60,7 +60,8 @@
       "Bash(python3 -c \"import homeassistant; print\\(homeassistant.__version__\\)\")",
       "Bash(find /usr -path \"*/homeassistant/components/lovelace/const.py\" 2>/dev/null | head -1; find /home -path \"*/homeassistant/components/lovelace/const.py\" 2>/dev/null | head -1; find /opt -path \"*/homeassistant/components/lovelace/const.py\" 2>/dev/null | head -1; pip show homeassistant 2>/dev/null | grep -E \"^Version|^Location\")",
       "Read(//opt/**)",
-      "Bash(/home/vscode/.local/ha-venv/bin/python -c ' *)"
+      "Bash(/home/vscode/.local/ha-venv/bin/python -c ' *)",
+      "Bash(timeout 200 script/lint)"
     ]
   }
 }

@@ -49,7 +49,7 @@ class CleanOrphansButton(ButtonEntity):
         """Initialize the button."""
         self._coordinator = coordinator
         self._attr_unique_id = f"{coordinator.entry.entry_id}_clean_orphans"
-        self._attr_name = f"Watchdog clean orphans: {coordinator.label_id} ({coordinator.period_key})"
+        self._attr_name = f"Clean orphans: {coordinator.label_name} ({coordinator.period_key})"
         self._attr_suggested_object_id = (
             f"{DOMAIN}_clean_orphans_{slugify(coordinator.label_id)}_{coordinator.period_key}"
         )
@@ -107,7 +107,7 @@ class CreateDashboardButton(ButtonEntity):
         """Initialize the button."""
         self._coordinator = coordinator
         self._attr_unique_id = f"{coordinator.entry.entry_id}_create_dashboard"
-        self._attr_name = f"Watchdog create dashboards: {coordinator.label_id} ({coordinator.period_key})"
+        self._attr_name = f"Create dashboards: {coordinator.label_name} ({coordinator.period_key})"
         self._attr_suggested_object_id = (
             f"{DOMAIN}_create_dashboard_{slugify(coordinator.label_id)}_{coordinator.period_key}"
         )

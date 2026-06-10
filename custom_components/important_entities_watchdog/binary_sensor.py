@@ -12,6 +12,7 @@ from homeassistant.util import dt as dt_util, slugify
 
 from .const import DOMAIN
 from .coordinator import WatchdogCoordinator
+from .silence import is_silent
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,27 +86,20 @@ class AvailabilityBinarySensor(BinarySensorEntity):
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{source_entity_id}"
         # Friendly name kept readable. Entity_id is controlled separately via
         # suggested_object_id so it's stable and predictable regardless of name.
-        self._attr_name = f"Watchdog {coordinator.label_id}: {source_entity_id} ({coordinator.period_key})"
+        self._attr_name = f"{coordinator.label_name}: {source_entity_id} ({coordinator.period_key})"
         self._attr_suggested_object_id = (
             f"{DOMAIN}_{slugify(coordinator.label_id)}_{slugify(source_entity_id)}_{coordinator.period_key}"
         )
 
     @property
     def is_on(self) -> bool | None:
-        """Return True if the source entity is fresh, False if stale."""
+        """Return True if the source is healthy, False if it has gone silent.
+
+        Silence is auto-detected per source — stale reports for push sensors,
+        unreachable/unavailable for connectivity sensors — see silence.py.
+        """
         state = self.hass.states.get(self._source)
-        if state is None:
-            return False
-
-        last = state.last_reported
-        if last is None:
-            # Fall back to last_updated for older HA versions
-            last = state.last_updated
-        if last is None:
-            return None
-
-        age = (dt_util.utcnow() - last).total_seconds()
-        return age < self._coordinator.period_seconds
+        return not is_silent(state, dt_util.utcnow(), self._coordinator.period_seconds)
 
     @property
     def extra_state_attributes(self) -> dict:

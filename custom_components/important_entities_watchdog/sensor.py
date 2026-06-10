@@ -12,6 +12,7 @@ from homeassistant.util import dt as dt_util, slugify
 
 from .const import DOMAIN
 from .coordinator import WatchdogCoordinator
+from .silence import is_silent
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,26 +46,18 @@ class SilentCountSensor(SensorEntity):
         """Initialize the sensor."""
         self._coordinator = coordinator
         self._attr_unique_id = f"{coordinator.entry.entry_id}_silent_count"
-        self._attr_name = f"Watchdog silent entities: {coordinator.label_id} ({coordinator.period_key})"
+        self._attr_name = f"Silent entities: {coordinator.label_name} ({coordinator.period_key})"
         self._attr_suggested_object_id = f"{DOMAIN}_silent_{slugify(coordinator.label_id)}_{coordinator.period_key}"
 
     def _compute_silent(self) -> list[str]:
-        """Return entity_ids whose source has not reported within the period."""
+        """Return entity_ids whose source is currently silent.
+
+        Silence is auto-detected per source (stale reports vs. unreachable/
+        unavailable) — see silence.py — and compared against the watchdog period.
+        """
         now = dt_util.utcnow()
-        threshold = self._coordinator.period_seconds
-        silent: list[str] = []
-        for eid in self._coordinator.tracked_entities:
-            state = self.hass.states.get(eid)
-            if state is None:
-                silent.append(eid)
-                continue
-            last = state.last_reported or state.last_updated
-            if last is None:
-                silent.append(eid)
-                continue
-            if (now - last).total_seconds() >= threshold:
-                silent.append(eid)
-        return silent
+        period = self._coordinator.period_seconds
+        return [eid for eid in self._coordinator.tracked_entities if is_silent(self.hass.states.get(eid), now, period)]
 
     @property
     def native_value(self) -> int:
