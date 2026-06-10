@@ -8,10 +8,11 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import dt as dt_util, slugify
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import WatchdogCoordinator
+from .entity_ids import binary_sensor_entity_id
 from .silence import is_silent
 
 _LOGGER = logging.getLogger(__name__)
@@ -84,12 +85,10 @@ class AvailabilityBinarySensor(BinarySensorEntity):
         self._coordinator = coordinator
         self._source = source_entity_id
         self._attr_unique_id = f"{coordinator.entry.entry_id}_{source_entity_id}"
-        # Friendly name kept readable. Entity_id is controlled separately via
-        # suggested_object_id so it's stable and predictable regardless of name.
+        # Friendly name kept readable; entity_id pinned explicitly so it is
+        # stable and predictable regardless of the display name.
         self._attr_name = f"{coordinator.label_name}: {source_entity_id} ({coordinator.period_key})"
-        self._attr_suggested_object_id = (
-            f"{DOMAIN}_{slugify(coordinator.label_id)}_{slugify(source_entity_id)}_{coordinator.period_key}"
-        )
+        self.entity_id = binary_sensor_entity_id(coordinator.label_id, source_entity_id, coordinator.period_key)
 
     @property
     def is_on(self) -> bool | None:
@@ -114,6 +113,10 @@ class AvailabilityBinarySensor(BinarySensorEntity):
             "source_entity": self._source,
             "last_reported": last_reported,
             "last_updated": last_updated,
+            # label_id + period uniquely identify the owning watchdog entry.
+            # The dashboard filters on these (stable) attributes rather than the
+            # entity_id, which is derived from the display name and not stable.
+            "label_id": self._coordinator.label_id,
             "period": self._coordinator.period_key,
             "period_seconds": self._coordinator.period_seconds,
         }

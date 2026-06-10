@@ -10,11 +10,11 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import WatchdogCoordinator
 from .dashboard import async_create_or_update_dashboard
+from .entity_ids import clean_orphans_entity_id, create_dashboard_entity_id
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,9 +50,7 @@ class CleanOrphansButton(ButtonEntity):
         self._coordinator = coordinator
         self._attr_unique_id = f"{coordinator.entry.entry_id}_clean_orphans"
         self._attr_name = f"Clean orphans: {coordinator.label_name} ({coordinator.period_key})"
-        self._attr_suggested_object_id = (
-            f"{DOMAIN}_clean_orphans_{slugify(coordinator.label_id)}_{coordinator.period_key}"
-        )
+        self.entity_id = clean_orphans_entity_id(coordinator.label_id, coordinator.period_key)
 
     async def async_press(self) -> None:
         """Remove orphan binary_sensor entries across every watchdog entry."""
@@ -108,9 +106,7 @@ class CreateDashboardButton(ButtonEntity):
         self._coordinator = coordinator
         self._attr_unique_id = f"{coordinator.entry.entry_id}_create_dashboard"
         self._attr_name = f"Create dashboards: {coordinator.label_name} ({coordinator.period_key})"
-        self._attr_suggested_object_id = (
-            f"{DOMAIN}_create_dashboard_{slugify(coordinator.label_id)}_{coordinator.period_key}"
-        )
+        self.entity_id = create_dashboard_entity_id(coordinator.label_id, coordinator.period_key)
 
     async def async_press(self) -> None:
         """Create or update the Watchdog Lovelace dashboard."""

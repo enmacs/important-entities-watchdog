@@ -340,10 +340,14 @@ def _build_view(
                         "title": f"Tracked sources ({period})",
                         "hours_to_show": 24,
                     },
-                    # Match this watchdog's own per-source binary sensors. The object_id
-                    # is "{DOMAIN}_{label}_{source}_{period}" (see binary_sensor.py), so the
-                    # prefix must be the full DOMAIN — "watchdog_" alone matched nothing.
-                    "filter": {"include": [{"entity_id": f"binary_sensor.{DOMAIN}_{slugify(label_id)}_*_{period}"}]},
+                    # Match this watchdog's own per-source binary sensors by stable
+                    # attributes, NOT entity_id: HA derives the entity_id from the
+                    # display name (slugified), so it is not a reliable pattern. The
+                    # label_id + period attributes (see binary_sensor.py) pin exactly
+                    # the sensors belonging to this (label, period) entry.
+                    "filter": {
+                        "include": [{"domain": "binary_sensor", "attributes": {"label_id": label_id, "period": period}}]
+                    },
                     "show_empty": False,
                     "grid_options": {"columns": 48, "rows": "auto"},
                 }

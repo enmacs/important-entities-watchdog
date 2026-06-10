@@ -8,10 +8,11 @@ from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import dt as dt_util, slugify
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .coordinator import WatchdogCoordinator
+from .entity_ids import summary_sensor_entity_id
 from .silence import is_silent
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class SilentCountSensor(SensorEntity):
         self._coordinator = coordinator
         self._attr_unique_id = f"{coordinator.entry.entry_id}_silent_count"
         self._attr_name = f"Silent entities: {coordinator.label_name} ({coordinator.period_key})"
-        self._attr_suggested_object_id = f"{DOMAIN}_silent_{slugify(coordinator.label_id)}_{coordinator.period_key}"
+        self.entity_id = summary_sensor_entity_id(coordinator.label_id, coordinator.period_key)
 
     def _compute_silent(self) -> list[str]:
         """Return entity_ids whose source is currently silent.
